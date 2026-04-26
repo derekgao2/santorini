@@ -1,0 +1,17 @@
+# OS files
+.DS_Store
+
+# Maven/local dependency cache
+.m2/
+
+# Build outputs
+target/
+out/
+
+# Java compiled artifacts
+*.class
+
+# IntelliJ IDEA / VS Code
+.idea/
+*.iml
+.vscode/
