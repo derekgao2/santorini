@@ -2,6 +2,23 @@
 skinparam classAttributeIconSize 0
 title Santorini - Implemented Class Relationships
 
+class "Main.GameConfig" as GameConfig <<record>> {
+  -whiteType: PlayerType
+  -blueType: PlayerType
+  -historyEnabled: boolean
+  -printScores: boolean
+  +whiteType(): PlayerType
+  +blueType(): PlayerType
+  +historyEnabled(): boolean
+  +printScores(): boolean
+}
+
+enum "Player.Type" as PlayerType {
+  HUMAN
+  RANDOM
+  HEURISTIC
+}
+
 enum Direction {
   N
   NE
@@ -11,11 +28,22 @@ enum Direction {
   SW
   W
   NW
+  -rowDelta: int
+  -colDelta: int
+  -token: String
+  +rowDelta(): int
+  +colDelta(): int
+  +token(): String
+  +fromInput(input: String): Direction
 }
 
 enum PlayerColor {
   WHITE
   BLUE
+  -label: String
+  +label(): String
+  +workerLabel(): String
+  +opponent(): PlayerColor
 }
 
 enum Worker {
@@ -23,10 +51,20 @@ enum Worker {
   B
   Y
   Z
+  -symbol: char
+  -owner: PlayerColor
+  +symbol(): char
+  +owner(): PlayerColor
+  +forPlayer(color: PlayerColor): Worker[]
+  +fromInput(input: String): Worker
 }
 
 class Main {
   +main(args: String[]): void
+  -parseConfig(args: String[]): GameConfig
+  -parsePlayerType(rawValue: String, playerLabel: String): Player.Type
+  -parseOnOff(rawValue: String, label: String): boolean
+  -printUsage(): void
 }
 
 class SantoriniGame {
@@ -34,14 +72,25 @@ class SantoriniGame {
   -scanner: Scanner
   -whitePlayer: Player
   -bluePlayer: Player
+  -printScores: boolean
+  -historyEnabled: boolean
   -historyManager: HistoryManager
   -currentPlayer: PlayerColor
   -turnNumber: int
+  -inputClosed: boolean
   +play(): void
+  +isInputClosed(): boolean
+  -printTurnHeader(): void
+  -activePlayer(): Player
+  -announceWinner(winner: PlayerColor): void
+  -handleHistoryChoice(): boolean
+  -createMemento(): GameMemento
+  -restoreFrom(memento: GameMemento): void
 }
 
 class Player <<record>> {
   -strategy: MoveStrategy
+  +strategy(): MoveStrategy
   +chooseTurn(board: Board, playerColor: PlayerColor, scanner: Scanner): TurnCommand
 }
 
@@ -49,70 +98,137 @@ interface MoveStrategy {
   +selectMove(board: Board, playerColor: PlayerColor, scanner: Scanner): TurnCommand
 }
 
-class HumanInputStrategy
-class RandomMoveStrategy
-class HeuristicMoveStrategy
+class HumanInputStrategy {
+  +selectMove(board: Board, playerColor: PlayerColor, scanner: Scanner): TurnCommand
+  -promptWorker(board: Board, playerColor: PlayerColor, scanner: Scanner): Worker
+  -promptMoveDirection(board: Board, worker: Worker, scanner: Scanner): Direction
+  -promptBuildDirection(board: Board, worker: Worker, moveDirection: Direction, scanner: Scanner): Direction
+  -readLineOrThrow(scanner: Scanner): String
+}
+
+class RandomMoveStrategy {
+  -random: Random
+  +RandomMoveStrategy()
+  +RandomMoveStrategy(random: Random)
+  +selectMove(board: Board, playerColor: PlayerColor, scanner: Scanner): TurnCommand
+}
+
+class HeuristicMoveStrategy {
+  -HEIGHT_WEIGHT: int
+  -CENTER_WEIGHT: int
+  -DISTANCE_WEIGHT: int
+  -WINNING_MOVE_SCORE: int
+  -random: Random
+  +HeuristicMoveStrategy()
+  +HeuristicMoveStrategy(random: Random)
+  +selectMove(board: Board, playerColor: PlayerColor, scanner: Scanner): TurnCommand
+  -scoreMove(board: Board, playerColor: PlayerColor, move: TurnCommand): int
+}
+
 MoveStrategy <|.. HumanInputStrategy
 MoveStrategy <|.. RandomMoveStrategy
 MoveStrategy <|.. HeuristicMoveStrategy
 
 class PlayerFactory {
-  +createPlayer(type): Player
+  +createPlayer(type: Player.Type): Player
 }
 
 class Board {
   -cells: Cell[][]
   -workerPositions: Map~Worker, Position~
+  +Board()
+  +reset(): void
+  +getWorkerPosition(worker: Worker): Position
+  +canMove(worker: Worker, moveDirection: Direction): boolean
+  +canBuildAfterMove(worker: Worker, moveDirection: Direction, buildDirection: Direction): boolean
+  +workerCanMoveAndBuild(worker: Worker): boolean
+  +moveReachesLevelThree(command: TurnCommand): boolean
   +legalMovesFor(playerColor: PlayerColor): List~TurnCommand~
   +applyMove(command: TurnCommand): void
   +cloneSnapshot(): BoardSnapshot
   +restoreSnapshot(snapshot: BoardSnapshot): void
   +scoreFor(playerColor: PlayerColor): ScoreBreakdown
+  +scoreAfterMove(playerColor: PlayerColor, command: TurnCommand): ScoreBreakdown
+  +winnerByLevelThree(): Optional~PlayerColor~
+  +render(): String
+  -placeWorker(worker: Worker, position: Position): void
+  -isInBounds(position: Position): boolean
+  -cell(position: Position): Cell
+  -scoreForProjectedPositions(playerColor: PlayerColor, projectedPositions: Map~Worker, Position~): ScoreBreakdown
+  -centerValue(position: Position): int
+  -movementDistance(a: Position, b: Position): int
 }
 
 class Cell {
   -level: int
   -occupant: Worker
+  +getLevel(): int
+  +getOccupant(): Worker
+  +setOccupant(occupant: Worker): void
+  +setLevel(level: int): void
+  +hasDome(): boolean
+  +build(): void
 }
 
 class Position <<record>> {
-  +row: int
-  +col: int
+  -row: int
+  -col: int
+  +row(): int
+  +col(): int
+  +move(direction: Direction): Position
 }
 
 class TurnCommand <<record>> {
-  +worker: Worker
-  +moveDirection: Direction
-  +buildDirection: Direction
+  -worker: Worker
+  -moveDirection: Direction
+  -buildDirection: Direction
+  +worker(): Worker
+  +moveDirection(): Direction
+  +buildDirection(): Direction
+  +toString(): String
 }
 
 class BoardSnapshot <<record>> {
-  +heightGrid: int[][]
-  +workerGrid: Worker[][]
+  -heightGrid: int[][]
+  -workerGrid: Worker[][]
+  +heightGrid(): int[][]
+  +workerGrid(): Worker[][]
 }
 
 class GameMemento <<record>> {
-  +boardSnapshot: BoardSnapshot
-  +currentPlayer: PlayerColor
-  +turnNumber: int
+  -boardSnapshot: BoardSnapshot
+  -currentPlayer: PlayerColor
+  -turnNumber: int
+  +boardSnapshot(): BoardSnapshot
+  +currentPlayer(): PlayerColor
+  +turnNumber(): int
 }
 
 class ScoreBreakdown <<record>> {
-  +heightScore: int
-  +centerScore: int
-  +distanceScore: int
+  -heightScore: int
+  -centerScore: int
+  -distanceScore: int
+  +heightScore(): int
+  +centerScore(): int
+  +distanceScore(): int
+  +toString(): String
 }
 
 class HistoryManager {
   -undoStack: Deque~GameMemento~
   -redoStack: Deque~GameMemento~
   +pushUndo(memento: GameMemento): void
+  +canUndo(): boolean
+  +canRedo(): boolean
   +undo(current: GameMemento): GameMemento
   +redo(current: GameMemento): GameMemento
 }
 
 Main --> PlayerFactory
 Main --> SantoriniGame
+Main --> Player
+Main --> GameConfig
+Main --> PlayerType
 
 SantoriniGame *-- Board
 SantoriniGame *-- HistoryManager
@@ -120,10 +236,18 @@ SantoriniGame --> Player
 SantoriniGame --> PlayerColor
 SantoriniGame --> TurnCommand
 SantoriniGame --> GameMemento
+SantoriniGame --> Scanner
 
 Player --> MoveStrategy
+Player --> Board
+Player --> PlayerColor
+Player --> TurnCommand
+Player --> Scanner
+Player --> PlayerType
 
 PlayerFactory --> Player
+PlayerFactory --> MoveStrategy
+PlayerFactory --> PlayerType
 PlayerFactory --> RandomMoveStrategy
 PlayerFactory --> HumanInputStrategy
 PlayerFactory --> HeuristicMoveStrategy
@@ -131,8 +255,19 @@ PlayerFactory --> HeuristicMoveStrategy
 MoveStrategy --> Board
 MoveStrategy --> PlayerColor
 MoveStrategy --> TurnCommand
+MoveStrategy --> Scanner
+HumanInputStrategy --> Worker
+HumanInputStrategy --> Direction
+HumanInputStrategy --> Scanner
+RandomMoveStrategy --> Board
+RandomMoveStrategy --> PlayerColor
 RandomMoveStrategy --> TurnCommand
+RandomMoveStrategy --> Random
+HeuristicMoveStrategy --> Board
+HeuristicMoveStrategy --> PlayerColor
+HeuristicMoveStrategy --> TurnCommand
 HeuristicMoveStrategy --> ScoreBreakdown
+HeuristicMoveStrategy --> Random
 
 Board *-- Cell
 Board --> Position
@@ -152,5 +287,7 @@ GameMemento --> BoardSnapshot
 GameMemento --> PlayerColor
 Worker --> PlayerColor
 HistoryManager --> GameMemento
+Main *-- GameConfig
+Player *-- PlayerType
 
 @enduml
