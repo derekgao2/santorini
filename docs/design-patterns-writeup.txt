@@ -1,0 +1,86 @@
+Santorini Design Pattern Writeup
+================================
+
+This program uses four design patterns: Strategy, Command, Memento, and Factory Method.
+These patterns were chosen because they directly match the structure of a turn-based game:
+we need interchangeable player decision logic, an explicit representation of turns, reliable
+undo/redo state history, and clean creation of different player types from configuration.
+
+
+1) Strategy Pattern
+-------------------
+Why we chose it:
+The game supports multiple decision policies (human input, random AI, heuristic AI) that
+should be swappable without changing the game loop.
+
+How it is implemented:
+- Strategy interface: MoveStrategy
+- Concrete strategies: HumanInputStrategy, RandomMoveStrategy, HeuristicMoveStrategy
+- Context class: Player
+
+Player stores a MoveStrategy and delegates move selection through chooseTurn(...), which
+calls strategy.selectMove(...). SantoriniGame only interacts with Player and does not need
+to know how the move was selected. This keeps the core game loop stable while allowing easy
+addition of future strategies.
+
+
+2) Command Pattern
+------------------
+Why we chose it:
+A turn in Santorini is naturally an action object (worker + move direction + build direction)
+that should be represented explicitly and executed in a consistent way.
+
+How it is implemented:
+- Command class: TurnCommand
+- Receiver: Board
+- Invoker/orchestrator: SantoriniGame
+
+TurnCommand stores all data required for a turn and exposes execute(Board), which applies
+it atomically by delegating to Board.applyMove(this). SantoriniGame obtains a TurnCommand
+from the active player and invokes command.execute(board). This makes turn operations clear,
+testable, and easy to log/replay as data.
+
+
+3) Memento Pattern
+------------------
+Why we chose it:
+Undo/redo requires restoring complete past game states without exposing or mutating internal
+board representation unsafely.
+
+How it is implemented:
+- Originator state data: BoardSnapshot + current player + turn number
+- Memento object: GameMemento
+- Caretaker: HistoryManager
+- Originator operations: Board.cloneSnapshot() and Board.restoreSnapshot(...)
+
+Before a new turn is executed, SantoriniGame pushes a snapshot into HistoryManager.
+HistoryManager maintains undo and redo stacks, supports undo(current) and redo(current), and
+clears redo history when a new action is recorded (pushUndo). This behavior matches expected
+undo/redo semantics.
+
+
+4) Factory Method Pattern
+-------------------------
+Why we chose it:
+Player construction depends on runtime setup choices (human, random, heuristic), and that
+creation logic should be centralized instead of scattered through main game flow code.
+
+How it is implemented:
+- Creator/factory class: PlayerFactory
+- Factory method: createPlayer(Player.Type)
+- Products: Player objects configured with specific MoveStrategy implementations
+
+Main parses setup options and asks PlayerFactory to create each player. PlayerFactory chooses
+the concrete strategy and returns a configured Player. This keeps object creation separate
+from gameplay logic and makes adding new player types straightforward.
+
+
+Why these four together work well
+---------------------------------
+- Strategy controls "how a move is chosen."
+- Command represents "what move is executed."
+- Memento preserves "what the game state was before/after moves."
+- Factory Method controls "how players/strategies are instantiated."
+
+Together, these patterns create a modular architecture where decision-making, execution,
+state history, and construction responsibilities are cleanly separated.
