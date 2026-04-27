@@ -185,6 +185,7 @@ class TurnCommand <<record>> {
   +worker(): Worker
   +moveDirection(): Direction
   +buildDirection(): Direction
+  +execute(board: Board): void
   +toString(): String
 }
 
@@ -276,6 +277,7 @@ Cell --> Worker
 Position --> Direction
 TurnCommand --> Worker
 TurnCommand --> Direction
+TurnCommand --> Board
 BoardSnapshot --> Worker
 GameMemento --> BoardSnapshot
 GameMemento --> PlayerColor

@@ -66,7 +66,7 @@ public class SantoriniGame {
             if (historyEnabled) {
                 historyManager.pushUndo(createMemento());
             }
-            board.applyMove(command);
+            command.execute(board);
             if (printScores) {
                 System.out.println(command + " " + board.scoreFor(movingPlayer));
             } else {
