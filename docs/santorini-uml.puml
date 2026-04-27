@@ -1,0 +1,211 @@
+@startuml
+title Santorini Game Class Diagram
+skinparam classAttributeIconSize 0
+
+enum Team {
+  WHITE
+  BLUE
+}
+
+enum Direction {
+  N
+  NE
+  E
+  SE
+  S
+  SW
+  W
+  NW
+}
+
+class SantoriniApp {
+  +main(args: String[]): void
+}
+
+class Main {
+  +main(args: String[]): void
+}
+
+class GameManager {
+  -state: GameState
+  -rules: SantoriniRules
+  -historyManager: HistoryManager
+  -whitePlayer: PlayerStrategy
+  -bluePlayer: PlayerStrategy
+  -scoreEnabled: boolean
+  -historyEnabled: boolean
+  -ui: UserInterface
+  +run(): void
+  +playAgainLoop(): void
+}
+
+class GameState {
+  -board: Board
+  -turnNumber: int
+  -currentTeam: Team
+  +clone(): GameState
+  +advanceTurn(): void
+  +switchCurrentTeam(): void
+}
+
+class Board {
+  -cells: Cell[5][5]
+  -workers: Map<Worker, Position>
+  +Board()
+  +initializeDefaultSetup(): void
+  +renderAscii(): String
+  +getCellAt(row: int, col: int): Cell
+  +getWorker(symbol: char): Worker
+}
+note right of Board
+  Regular per-game object,
+  not a singleton/global.
+  Pass locally where needed.
+end note
+
+class Cell {
+  -height: int
+  -worker: Worker
+  +canBuild(): boolean
+  +buildLevel(): void
+}
+
+class Worker {
+  -symbol: char
+  -team: Team
+  +fromSymbol(symbol: char): Worker
+  +fromToken(input: String): Worker
+}
+
+class Move {
+  -workerSymbol: char
+  -moveDirection: Direction
+  -buildDirection: Direction
+  +toString(): String
+}
+
+class Position {
+  -row: int
+  -col: int
+}
+
+class SantoriniRules {
+  +generateLegalMoves(state: GameState, team: Team): List<Move>
+  +canWorkerMove(state: GameState, worker: Worker): boolean
+  +canMove(state: GameState, worker: Worker, direction: Direction): boolean
+  +canBuildAfterMove(state: GameState, worker: Worker, moveDirection: Direction, buildDirection: Direction): boolean
+  +applyMove(state: GameState, move: Move): void
+  +winner(state: GameState): Team
+  +isStuck(state: GameState, team: Team): boolean
+}
+
+interface PlayerStrategy {
+  +chooseMove(board: Board, state: GameState, rules: SantoriniRules, ui: UserInterface): Move
+}
+
+class HumanPlayer {
+  -team: Team
+}
+
+class RandomAIPlayer {
+  -team: Team
+  -rng: Random
+}
+
+class HeuristicAIPlayer {
+  -team: Team
+  -rng: Random
+  -c1: int
+  -c2: int
+  -c3: int
+  +evaluatePosition(board: Board, team: Team): ScoreBreakdown
+}
+
+class ScoreBreakdown {
+  -heightScore: int
+  -centerScore: int
+  -distanceScore: int
+  +total(c1: int, c2: int, c3: int): int
+  +toString(): String
+}
+
+class UserInterface {
+  +printBoard(board: Board): void
+  +printTurn(turnNumber: int, team: Team, score: ScoreBreakdown): void
+  +promptWorker(team: Team): char
+  +promptDirection(message: String): Direction
+  +promptPlayAgain(): boolean
+  +promptHistoryAction(): String
+  +printMove(move: Move, score: ScoreBreakdown): void
+  +printWinner(winner: Team): void
+  +printMessage(message: String): void
+}
+
+class HistoryManager {
+  -snapshots: List<GameState>
+  -cursor: int
+  +reset(initialState: GameState): void
+  +record(state: GameState): void
+  +undo(): GameState
+  +redo(): GameState
+  +canUndo(): boolean
+  +canRedo(): boolean
+  +truncateFuture(): void
+}
+
+class PlayerFactory {
+  +create(type: String, team: Team): PlayerStrategy
+}
+
+class Config {
+  -whiteType: String
+  -blueType: String
+  -historyEnabled: boolean
+  -scoreEnabled: boolean
+  +fromArgs(args: String[]): Config
+}
+
+SantoriniApp --> Config
+SantoriniApp --> GameManager
+SantoriniApp --> PlayerFactory
+Main --> SantoriniApp
+
+GameManager *-- GameState
+GameManager *-- SantoriniRules
+GameManager o-- UserInterface
+GameManager o-- HistoryManager
+GameManager o-- PlayerStrategy : white
+GameManager o-- PlayerStrategy : blue
+
+GameState *-- Board
+GameState --> Team
+Board *-- Cell
+Board o-- Worker
+Board --> Position
+Cell o-- Worker
+Worker --> Team
+
+SantoriniRules --> Move
+SantoriniRules --> Direction
+SantoriniRules --> Team
+SantoriniRules --> GameState
+
+Move --> Direction
+
+PlayerStrategy <|.. HumanPlayer
+PlayerStrategy <|.. RandomAIPlayer
+PlayerStrategy <|.. HeuristicAIPlayer
+HeuristicAIPlayer --> ScoreBreakdown
+
+RandomAIPlayer --> Move
+HeuristicAIPlayer --> Move
+HumanPlayer --> Move
+
+UserInterface --> Direction
+UserInterface --> Team
+UserInterface --> ScoreBreakdown
+
+HistoryManager --> GameState
+PlayerFactory --> PlayerStrategy
+
+@enduml

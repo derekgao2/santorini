@@ -1,43 +1,64 @@
 package santorini;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HistoryManager {
-    private final Deque<GameMemento> undoStack;
-    private final Deque<GameMemento> redoStack;
+    private final List<GameState> snapshots;
+    private int cursor;
 
     public HistoryManager() {
-        this.undoStack = new ArrayDeque<>();
-        this.redoStack = new ArrayDeque<>();
+        this.snapshots = new ArrayList<>();
+        this.cursor = -1;
     }
 
-    public void pushUndo(GameMemento memento) {
-        undoStack.push(memento);
-        redoStack.clear();
+    public void reset(GameState initialState) {
+        snapshots.clear();
+        snapshots.add(initialState.clone());
+        cursor = 0;
+    }
+
+    public void record(GameState state) {
+        truncateFuture();
+        snapshots.add(state.clone());
+        cursor = snapshots.size() - 1;
+    }
+
+    public GameState undo() {
+        if (canUndo()) {
+            cursor -= 1;
+        }
+        return current();
+    }
+
+    public GameState redo() {
+        if (canRedo()) {
+            cursor += 1;
+        }
+        return current();
     }
 
     public boolean canUndo() {
-        return !undoStack.isEmpty();
+        return cursor > 0;
     }
 
     public boolean canRedo() {
-        return !redoStack.isEmpty();
+        return cursor >= 0 && cursor < snapshots.size() - 1;
     }
 
-    public GameMemento undo(GameMemento current) {
-        if (undoStack.isEmpty()) {
-            return current;
+    public void truncateFuture() {
+        if (cursor < 0) {
+            return;
         }
-        redoStack.push(current);
-        return undoStack.pop();
+        while (snapshots.size() > cursor + 1) {
+            snapshots.remove(snapshots.size() - 1);
+        }
     }
 
-    public GameMemento redo(GameMemento current) {
-        if (redoStack.isEmpty()) {
-            return current;
+    private GameState current() {
+        if (snapshots.isEmpty()) {
+            throw new IllegalStateException("HistoryManager has no snapshots.");
         }
-        undoStack.push(current);
-        return redoStack.pop();
+        return snapshots.get(cursor).clone();
     }
 }

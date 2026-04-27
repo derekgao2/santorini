@@ -1,12 +1,12 @@
 package santorini;
 
 public class PlayerFactory {
-    public Player createPlayer(Player.Type type) {
-        MoveStrategy strategy = switch (type) {
-            case HUMAN -> new HumanInputStrategy();
-            case RANDOM -> new RandomMoveStrategy();
-            case HEURISTIC -> new HeuristicMoveStrategy();
+    public PlayerStrategy create(String type, Team team) {
+        return switch (type.trim().toLowerCase()) {
+            case "human" -> new HumanPlayer(team);
+            case "random" -> new RandomAIPlayer(team);
+            case "heuristic" -> new HeuristicAIPlayer(team);
+            default -> throw new IllegalArgumentException("Unknown player type: " + type);
         };
-        return new Player(strategy);
     }
 }

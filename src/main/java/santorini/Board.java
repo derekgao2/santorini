@@ -20,10 +20,10 @@ public class Board {
             }
         }
         workerPositions = new EnumMap<>(Worker.class);
-        reset();
+        initializeDefaultSetup();
     }
 
-    public final void reset() {
+    public final void initializeDefaultSetup() {
         workerPositions.clear();
         for (int row = 0; row < SIZE; row++) {
             for (int col = 0; col < SIZE; col++) {
@@ -44,6 +44,14 @@ public class Board {
 
     public Position getWorkerPosition(Worker worker) {
         return workerPositions.get(worker);
+    }
+
+    public Cell getCellAt(int row, int col) {
+        return cells[row][col];
+    }
+
+    public Worker getWorker(char symbol) {
+        return Worker.fromSymbol(symbol);
     }
 
     public boolean canMove(Worker worker, Direction moveDirection) {
@@ -101,16 +109,17 @@ public class Board {
         return false;
     }
 
-    public boolean moveReachesLevelThree(TurnCommand command) {
-        Position from = getWorkerPosition(command.worker());
-        Position to = from.move(command.moveDirection());
+    public boolean moveReachesLevelThree(Move move) {
+        Worker worker = Worker.fromSymbol(move.workerSymbol());
+        Position from = getWorkerPosition(worker);
+        Position to = from.move(move.moveDirection());
         return isInBounds(to) && cell(to).getLevel() == 3;
     }
 
-    public void applyMove(TurnCommand command) {
-        Worker worker = command.worker();
-        Direction moveDirection = command.moveDirection();
-        Direction buildDirection = command.buildDirection();
+    public void applyMove(Move move) {
+        Worker worker = Worker.fromSymbol(move.workerSymbol());
+        Direction moveDirection = move.moveDirection();
+        Direction buildDirection = move.buildDirection();
 
         if (!canMove(worker, moveDirection)) {
             throw new IllegalArgumentException("Illegal move direction");
@@ -130,10 +139,10 @@ public class Board {
         cell(buildAt).build();
     }
 
-    public List<TurnCommand> legalMovesFor(PlayerColor playerColor) {
-        List<TurnCommand> legalMoves = new ArrayList<>();
+    public List<Move> legalMovesFor(Team team) {
+        List<Move> legalMoves = new ArrayList<>();
         for (Worker worker : Worker.values()) {
-            if (worker.owner() != playerColor) {
+            if (worker.team() != team) {
                 continue;
             }
             for (Direction moveDirection : Direction.values()) {
@@ -142,7 +151,7 @@ public class Board {
                 }
                 for (Direction buildDirection : Direction.values()) {
                     if (canBuildAfterMove(worker, moveDirection, buildDirection)) {
-                        legalMoves.add(new TurnCommand(worker, moveDirection, buildDirection));
+                        legalMoves.add(new Move(worker.symbol(), moveDirection, buildDirection));
                     }
                 }
             }
@@ -178,29 +187,30 @@ public class Board {
         }
     }
 
-    public ScoreBreakdown scoreFor(PlayerColor playerColor) {
-        return scoreForProjectedPositions(playerColor, workerPositions);
+    public ScoreBreakdown scoreFor(Team team) {
+        return scoreForProjectedPositions(team, workerPositions);
     }
 
-    public ScoreBreakdown scoreAfterMove(PlayerColor playerColor, TurnCommand command) {
+    public ScoreBreakdown scoreAfterMove(Team team, Move move) {
         Map<Worker, Position> projected = new EnumMap<>(Worker.class);
         projected.putAll(workerPositions);
-        Position from = projected.get(command.worker());
-        projected.put(command.worker(), from.move(command.moveDirection()));
-        return scoreForProjectedPositions(playerColor, projected);
+        Worker worker = Worker.fromSymbol(move.workerSymbol());
+        Position from = projected.get(worker);
+        projected.put(worker, from.move(move.moveDirection()));
+        return scoreForProjectedPositions(team, projected);
     }
 
-    public Optional<PlayerColor> winnerByLevelThree() {
+    public Optional<Team> winnerByLevelThree() {
         for (Worker worker : Worker.values()) {
             Position pos = getWorkerPosition(worker);
             if (cell(pos).getLevel() == 3) {
-                return Optional.of(worker.owner());
+                return Optional.of(worker.team());
             }
         }
         return Optional.empty();
     }
 
-    public String render() {
+    public String renderAscii() {
         StringBuilder sb = new StringBuilder();
         for (int row = 0; row < SIZE; row++) {
             sb.append("+--+--+--+--+--+\n");
@@ -217,6 +227,10 @@ public class Board {
         return sb.toString();
     }
 
+    public String render() {
+        return renderAscii();
+    }
+
     private boolean isInBounds(Position position) {
         return position.row() >= 0 && position.row() < SIZE && position.col() >= 0 && position.col() < SIZE;
     }
@@ -225,9 +239,9 @@ public class Board {
         return cells[position.row()][position.col()];
     }
 
-    private ScoreBreakdown scoreForProjectedPositions(PlayerColor playerColor, Map<Worker, Position> projectedPositions) {
-        Worker[] myWorkers = Worker.forPlayer(playerColor);
-        Worker[] opponentWorkers = Worker.forPlayer(playerColor.opponent());
+    private ScoreBreakdown scoreForProjectedPositions(Team team, Map<Worker, Position> projectedPositions) {
+        Worker[] myWorkers = Worker.forTeam(team);
+        Worker[] opponentWorkers = Worker.forTeam(team.opponent());
 
         int heightScore = 0;
         int centerScore = 0;

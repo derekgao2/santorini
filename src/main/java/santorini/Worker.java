@@ -1,35 +1,35 @@
 package santorini;
 
 public enum Worker {
-    A('A', PlayerColor.WHITE),
-    B('B', PlayerColor.WHITE),
-    Y('Y', PlayerColor.BLUE),
-    Z('Z', PlayerColor.BLUE);
+    A('A', Team.WHITE),
+    B('B', Team.WHITE),
+    Y('Y', Team.BLUE),
+    Z('Z', Team.BLUE);
 
     private final char symbol;
-    private final PlayerColor owner;
+    private final Team team;
 
-    Worker(char symbol, PlayerColor owner) {
+    Worker(char symbol, Team team) {
         this.symbol = symbol;
-        this.owner = owner;
+        this.team = team;
     }
 
     public char symbol() {
         return symbol;
     }
 
-    public PlayerColor owner() {
-        return owner;
+    public Team team() {
+        return team;
     }
 
-    public static Worker[] forPlayer(PlayerColor color) {
-        if (color == PlayerColor.WHITE) {
+    public static Worker[] forTeam(Team team) {
+        if (team == Team.WHITE) {
             return new Worker[] {A, B};
         }
         return new Worker[] {Y, Z};
     }
 
-    public static Worker fromInput(String input) {
+    public static Worker fromToken(String input) {
         if (input == null) {
             return null;
         }
@@ -38,6 +38,16 @@ public enum Worker {
             return null;
         }
         char candidate = Character.toUpperCase(trimmed.charAt(0));
+        for (Worker worker : values()) {
+            if (worker.symbol == candidate) {
+                return worker;
+            }
+        }
+        return null;
+    }
+
+    public static Worker fromSymbol(char symbol) {
+        char candidate = Character.toUpperCase(symbol);
         for (Worker worker : values()) {
             if (worker.symbol == candidate) {
                 return worker;
