@@ -236,13 +236,11 @@ SantoriniGame --> Player
 SantoriniGame --> PlayerColor
 SantoriniGame --> TurnCommand
 SantoriniGame --> GameMemento
-SantoriniGame --> Scanner
 
 Player --> MoveStrategy
 Player --> Board
 Player --> PlayerColor
 Player --> TurnCommand
-Player --> Scanner
 Player --> PlayerType
 
 PlayerFactory --> Player
@@ -255,19 +253,15 @@ PlayerFactory --> HeuristicMoveStrategy
 MoveStrategy --> Board
 MoveStrategy --> PlayerColor
 MoveStrategy --> TurnCommand
-MoveStrategy --> Scanner
 HumanInputStrategy --> Worker
 HumanInputStrategy --> Direction
-HumanInputStrategy --> Scanner
 RandomMoveStrategy --> Board
 RandomMoveStrategy --> PlayerColor
 RandomMoveStrategy --> TurnCommand
-RandomMoveStrategy --> Random
 HeuristicMoveStrategy --> Board
 HeuristicMoveStrategy --> PlayerColor
 HeuristicMoveStrategy --> TurnCommand
 HeuristicMoveStrategy --> ScoreBreakdown
-HeuristicMoveStrategy --> Random
 
 Board *-- Cell
 Board --> Position
